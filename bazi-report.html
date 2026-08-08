@@ -30,10 +30,15 @@
 <div class="wrap">
   <div id="form">
     <h1>八字古典考释 · 六维专线</h1>
-    <div class="tip">严格以《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》为纲 · 无据不妄断</div>
+    <div class="tip">以《易经》《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》《四柱预测学》等权威典籍为纲 · 无据不妄断</div>
     <div class="card">
       <label>出生日期（公历）</label>
-      <input id="date" type="date" value="2000-02-28">
+      <div class="row">
+        <div><input id="date" type="text" placeholder="如 19880228 或 1988-02-28" value="2000-02-28"></div>
+        <div style="flex:0 0 92px;"><button type="button" id="pickDate" style="width:100%;padding:11px 0;background:#cdbf95;color:#4a3c18;border:none;border-radius:8px;font-size:13px;cursor:pointer;">📅 选择</button></div>
+      </div>
+      <input type="date" id="datePicker" style="display:none;">
+      <div class="note" style="margin-top:5px;">支持手写：19880228 / 1988-02-28 / 1988.2.28，或点「选择」调日历。</div>
       <label>出生时间</label>
       <div class="row">
         <div><input id="hour" type="number" min="0" max="23" placeholder="时" value="9"></div>
@@ -588,7 +593,7 @@
 <script>
 /*
  * report.js — 古典考释六维报告生成器（纯 JS，无第三方依赖）
- * 严格以《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》为纲，
+ * 以《易经》《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》《四柱预测学》等权威典籍为纲，
  *   无据不妄断；分层标注确定性；输出结构化 HTML 字符串 + 关键数据。
  * 用法：
  *   const bz = require('./engine.js');
@@ -618,7 +623,14 @@
     fuqi_gong: { t: '《三命通会》', s: '日支为夫妻之宫，宫星相得则琴瑟和鸣，宫星相战则参商多见。' },
     zinv_gong: { t: '《渊海子平》', s: '男以官杀为子，女以食伤为子；子女之星有气、居长生禄旺之位，则子嗣蕃昌。' },
     tiangan_he: { t: '《子平真诠》', s: '天干五合，羁绊有情；合而有化，其力乃真。' },
-    dizhi_chong: { t: '《滴天髓》', s: '地支相冲，根基动摇；冲喜用则凶，冲忌神则反得松动。' }
+    dizhi_chong: { t: '《滴天髓》', s: '地支相冲，根基动摇；冲喜用则凶，冲忌神则反得松动。' },
+    /* —— 扩展权威典籍 —— */
+    yijing_qian: { t: '《易经》', s: '乾卦：潜龙勿用，阳在下也；飞龙在天，乃位乎天德。大运未至当潜藏积累，得位则乘势而起。' },
+    yijing_kun: { t: '《易经》', s: '坤卦：地势坤，君子以厚德载物。日主偏弱，宜借势承载而不争先，以柔蓄刚。' },
+    yijing_bianyi: { t: '《易经》', s: '易穷则变，变则通，通则久。运岁流转、吉凶相代，故逢凶运宜守，逢吉运宜进。' },
+    sizhu_dayun: { t: '《四柱预测学》', s: '大运十年一换，吉凶以运干支与命局生克为准；岁运并临、岁运相生之年，应象最强。' },
+    sizhu_shiyuan: { t: '《四柱预测学》', s: '时柱为子女宫，时柱有力、子女星得地，则子女有依、缘份从容；时柱空弱则宜中年稳固。' },
+    sizhu_liunian: { t: '《四柱预测学》', s: '流年天干主外象、地支主内应；太岁与命局、大运三合逢冲，其事乃显，宜顺势而为。' }
   };
 
   /* ============================ 工具函数 ============================ */
@@ -666,6 +678,7 @@
       + '空亡 <b>' + r.kongwang.join('、') + '</b></p>';
     html += '<p>日主旺衰：<b>' + st.label + '</b>（评分 ' + st.score + '）。取用原则：' + ug.principle
       + '。故 <b class="xi">喜 ' + xi + '</b>，<b class="ji">忌 ' + ji + '</b>。</p>';
+    html += '<p class="cite">「' + QUOTE.yijing_qian.s + '」' + QUOTE.yijing_qian.t + '；故运年未至当潜藏积累，逢吉运临则乘势进取，凶运临宜守成。</p>';
     html += '<p>五行分布：' + ['木', '火', '土', '金', '水'].map(function (e) { return e + ' ' + wx[e]; }).join('　')
       + '。　' + organTip + '。</p>';
     if (st.score <= -3) {
@@ -750,7 +763,8 @@
         + '<td>' + d.start_age + '–' + d.end_age + '岁</td><td>' + startY + '–' + endY + '</td>'
         + '<td>' + d.nayin + '</td></tr>';
     });
-    html += '</table><p class="cite">大运顺逆、起运岁数依《子平真诠》"运从月令起，阳男阴女顺行，阴男阳女逆行，三日为一岁"之法。</p></div></div>';
+    html += '</table><p class="cite">大运顺逆、起运岁数依《子平真诠》"运从月令起，阳男阴女顺行，阴男阳女逆行，三日为一岁"之法。</p>'
+      + '<p class="cite">「' + QUOTE.sizhu_dayun.s + '」' + QUOTE.sizhu_dayun.t + '；故下文逐年流年尤重"岁运并临、岁运相生"之年。</p></div></div>';
     return { html: html };
   }
   function dayunClass(r, tg) {
@@ -815,6 +829,7 @@
       html += '<tr><td>' + y.year + '</td><td><b>' + y.pillar + '</b></td><td>' + y.ten_god + '</td><td>' + y.age + '岁</td><td>' + (y.active_dayun || '—') + '</td><td>' + tip + '</td></tr>';
     });
     html += '</table>';
+    html += '<p class="cite">「' + QUOTE.sizhu_liunian.s + '」' + QUOTE.sizhu_liunian.t + '</p>';
     // 关键年点评
     var key = [];
     ln.forEach(function (y) {
@@ -938,6 +953,7 @@
       html += '<p class="warn box">⚠ 时柱缺失（未提供出生时辰），子女宫细象与子女数量应期为<b>待定层</b>，补时辰后可定稿。子女星之强弱（上句）不依赖时辰，可定为确定层。</p>';
     } else {
       html += '<p class="cite">「' + QUOTE.zinv_gong.s + '」' + QUOTE.zinv_gong.t + (inArr(r.kongwang, pd.hour.zhi) ? '；时柱落空亡，子女缘宜中年稳固后更显。' : '。') + '</p>';
+      html += '<p class="cite">「' + QUOTE.sizhu_shiyuan.s + '」' + QUOTE.sizhu_shiyuan.t + '</p>';
     }
 
     // —— 健康 ——
@@ -1061,7 +1077,7 @@
       + '</style>';
 
     var inner = '<h1>古典考释 · 八字六维专线</h1>'
-      + '<div class="sub2">严格以《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》为纲 · 无据不妄断</div>'
+      + '<div class="sub2">以《易经》《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》《四柱预测学》等权威典籍为纲 · 无据不妄断</div>'
       + notice
       + body
       + disclaimer;
@@ -1083,6 +1099,16 @@
 </script>
 <script>
 function pad(n){return (n<10?'0':'')+n;}
+/* 解析多种日期格式：19880228 / 1988-02-28 / 1988/02/28 / 1988.2.28 / 1988年02月28日 */
+function parseDateStr(s){
+  s=(s||'').trim(); if(!s) return null;
+  var m;
+  if(/^\d{8}$/.test(s)) return {y:+s.slice(0,4), m:+s.slice(4,6), d:+s.slice(6,8)};
+  if((m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return {y:+m[1], m:+m[2], d:+m[3]};
+  if((m=s.match(/^(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?$/))) return {y:+m[1], m:+m[2], d:+m[3]};
+  return null;
+}
+function fmtDate(p){ return p.y+'-'+pad(p.m)+'-'+pad(p.d); }
 
 /* ===== 省市经度表（取省会/代表点东经度数，用于真太阳时校正） ===== */
 var PROV = {
@@ -1136,6 +1162,14 @@ document.getElementById('prov').onchange=function(){ fillCity(this.value); docum
 document.getElementById('city').onchange=function(){ document.getElementById('lon').value=curLon(); };
 document.getElementById('useLon').onclick=function(){ /* 仅作提示：手动值已写入 lon，生成时读取 */ };
 fillProv();
+/* 日期：日历选择回填文本框 */
+document.getElementById('pickDate').onclick=function(){
+  var dp=document.getElementById('datePicker');
+  var p=parseDateStr(document.getElementById('date').value);
+  if(p && p.y>1900 && p.y<2100) dp.value=fmtDate(p);
+  try{ if(dp.showPicker) dp.showPicker(); else dp.click(); }catch(e){ dp.click(); }
+};
+document.getElementById('datePicker').onchange=function(){ if(this.value) document.getElementById('date').value=this.value; };
 
 /* ===== 历史记录（localStorage） ===== */
 var HKEY='bazi_hist_v1';
@@ -1167,7 +1201,7 @@ function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;'
 
 /* ===== 生成报告 ===== */
 document.getElementById('go').onclick = function(){
-  var date = document.getElementById('date').value;
+  var rawDate = document.getElementById('date').value;
   var h = document.getElementById('hour').value;
   var m = document.getElementById('min').value;
   var gender = document.getElementById('gender').value;
@@ -1176,7 +1210,9 @@ document.getElementById('go').onclick = function(){
   var unk = document.getElementById('unknowH').checked;
   var err = document.getElementById('err');
   err.textContent='';
-  if(!date){err.textContent='请填写出生日期';return;}
+  var pd = parseDateStr(rawDate);
+  if(!pd){err.textContent='日期格式无法识别，请按 1988-02-28 或 19880228 填写';return;}
+  var date = fmtDate(pd);
   if(!unk){
     if(h===''||m===''){err.textContent='请填写出生时间，或勾选"不清楚出生时辰"';return;}
     h=parseInt(h,10);m=parseInt(m,10);
