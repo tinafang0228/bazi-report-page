@@ -24,6 +24,12 @@
   #report{display:none;}
   /* 报告内样式复用 report.js 输出 */
   .back{display:inline-block;margin:0 0 8px;color:#8a6d28;font-size:14px;cursor:pointer;}
+  /* 术语点击气泡 */
+  .term-mask{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:9998;display:none;align-items:flex-end;justify-content:center;padding:18px;}
+  .term-pop{position:relative;width:100%;max-width:440px;background:#fff;border:1px solid #1a5a9a;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:14px 16px;margin-bottom:6px;}
+  .tp-x{position:absolute;right:10px;top:6px;color:#999;font-size:20px;cursor:pointer;line-height:1;}
+  .tp-h{font-weight:700;color:#1a5a9a;font-size:15px;margin-bottom:6px;padding-right:18px;}
+  .tp-b{font-size:13.5px;color:#333;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -633,6 +639,53 @@
     sizhu_liunian: { t: '《四柱预测学》', s: '流年天干主外象、地支主内应；太岁与命局、大运三合逢冲，其事乃显，宜顺势而为。' }
   };
 
+  /* ============================ 术语白话解（用户一看就懂） ============================ */
+  // 用于报告中关键术语的点击解释，以及文末「九 · 术语白话解」词典章节。
+  var GLOSSARY = {
+    '日主': '就是“你”自己。八字里代表你出生那天的天干（如癸水、戊土）。整张命盘都围绕它看强弱、定喜忌。',
+    '八字': '出生的年、月、日、时，各用一个“天干+地支”表示，共四组八个字，所以叫八字，也称四柱。',
+    '四柱': '年柱、月柱、日柱、时柱的合称，每柱一个天干+一个地支，合起来就是你的八字。',
+    '五行': '金、木、水、火、土五种基本元素。八字里每种元素的多少，决定体质倾向和运势走向。',
+    '旺衰': '日主（你）在命盘里是强还是弱。身强能扛事、身弱需要扶持，这是取用神的依据。',
+    '喜用神': '对你最有利的五行，叫喜神和用神（合称喜用）。选行业、方位、看运年好坏都看它。',
+    '忌神': '对你最不利的五行。遇到“忌神”旺的年份或运，宜保守、不宜强攻。',
+    '十神': '把八字其余七个字和“你”的关系分成十类（比肩、劫财、食神、伤官、正财、偏财、正官、七杀、正印、偏印），代表人、事、物不同面向。',
+    '比肩': '和你五行、阴阳都相同的字，像同辈、朋友、同事、竞争者。',
+    '劫财': '和你五行相同但阴阳相反的字，也代表同辈朋友，但带点“分你一杯羹”的意味。',
+    '比劫': '比肩与劫财的合称，都代表同辈、朋友、同事、合作者。',
+    '食神': '你生出来的“输出”，代表才华、技艺、口福、子孙，性格偏温和。',
+    '伤官': '也是你生出来的“输出”，代表才华、表达、叛逆、创意，比食神更张扬。',
+    '食伤': '食神与伤官的合称，代表你的才华、表达、技艺与输出能力。',
+    '正财': '稳定的收入、工资、正当财富，也代表妻子的正缘（男命）。',
+    '偏财': '外快、投资、意外之财，也代表情缘偏缘（男命）。',
+    '财星': '正财与偏财的合称，在命理里代表财富与收入来源。',
+    '正官': '事业、规矩、名誉、压力，也是女命的丈夫/正缘。',
+    '七杀': '更强的事业心、权威、挑战与压力，也是女命的偏缘/男友。',
+    '官杀': '正官与七杀的合称，代表事业、权力、压力，女命也代表异性缘。',
+    '正印': '学历、贵人、长辈、平台、庇护，是生助你的“靠山”。',
+    '偏印': '也代表学识、技艺、偏门才华，但略带孤僻，同样是生助你的力量。',
+    '印星': '正印与偏印的合称，代表学历、贵人、长辈、平台与庇护。',
+    '大运': '每十年换一次的运气阶段，人生像坐火车，大运是每一段路程的主题。',
+    '流年': '每一年具体的运气，叠加在当步大运之上，像当年的天气。',
+    '岁运并临': '当年干支和你正走的大运干支恰好一样，吉凶都会加倍明显。',
+    '空亡': '某些地支“落空”，就像信号弱：吉事减力、凶事也减力，需好运来“填实”才显。',
+    '夫妻宫': '八字日柱的地支，专门代表配偶与婚姻状态，看夫妻宫可断婚姻质量。',
+    '子女宫': '出生时辰那一柱（时柱），代表子女缘分与子女状况。',
+    '子女星': '代表子女的星：男命看官杀、女命看食伤。子女星有气，主子女缘厚。',
+    '配偶星': '代表配偶的星：男命看财星、女命看官杀。配偶星得位，主姻缘顺遂。',
+    '神煞': '古人总结的吉凶“星曜”（如天乙贵人、红鸾、桃花），作为论命的辅助参考。',
+    '天乙贵人': '最强贵的吉神，命中遇之危难有救、平居得贵人相助。',
+    '驿马': '主变动、远行、出差、搬家，落空亡则动而难扎根。',
+    '华盖': '主聪慧孤高、喜玄学艺术，带点清高与独处气质。',
+    '文昌': '主文采、学业、考试运，利读书与文书。',
+    '桃花': '也称咸池，主情缘与人缘，过旺则须防感情牵累。',
+    '红鸾': '主姻缘喜庆之期，红鸾值年易有正缘信号。',
+    '天喜': '主喜庆之事，常与红鸾同现，增添喜气。',
+    '纳音': '每一柱的五行“音色”（如海中金、炉中火），古人用来补充论命。',
+    '十二长生': '五行在十二地支的兴衰循环（长生、沐浴…死、墓、绝），用来判断宫位强弱。',
+    '真太阳时': '按出生地经度，把“北京时间”校正成当地太阳时，决定你真正的出生时辰。'
+  };
+
   /* ============================ 工具函数 ============================ */
   function esc(s) {
     if (s === undefined || s === null) return '';
@@ -641,6 +694,17 @@
     });
   }
   function inArr(arr, v) { return arr.indexOf(v) >= 0; }
+  // 把术语包成可点击的 span（移动端友好，点一下看白话解释）
+  function term(k) { return '<span class="term" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }
+  // 对已有 HTML 文本做安全包裹：仅包“裸词”（不在标签内、前后非中文/引号）
+  var _termKeys = Object.keys(GLOSSARY).sort(function (a, b) { return b.length - a.length; });
+  function wrapTerms(html) {
+    _termKeys.forEach(function (k) {
+      var re = new RegExp('(^|[^\\u4e00-\\u9fff">])(' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&') + ')(?![\\u4e00-\\u9fff<"])', 'g');
+      html = html.replace(re, function (m, pre, w) { return pre + '<span class="term" data-k="' + w + '">' + w + '</span>'; });
+    });
+    return html;
+  }
 
   // 五行→脏腑
   var ORGAN = { '木': '肝胆、筋骨', '火': '心、小肠、血脉', '土': '脾胃、肌肉', '金': '肺、大肠、呼吸道', '水': '肾、膀胱、泌尿生殖' };
@@ -1039,15 +1103,14 @@
     var name = (opts.name && opts.name.trim()) ? opts.name.trim() : '';
     var title = (name ? name + ' · ' : '') + '古典考释 · 六维专线（' + r.bazi.year + ' ' + r.bazi.month + ' ' + r.bazi.day + ' ' + r.bazi.hour + ' · ' + r.input.gender + '）';
     var body = '';
-    var o = buildOverall(r, opts);
-    body += o.html;
-    body += sixDimSummary(r).html;
-    body += buildDaYun(r).html;
-    body += buildPast(r).html;
-    body += buildFuture(r).html;
-    body += buildSixDims(r, opts).html;
-    body += buildShenSha(r).html;
-    body += buildVerify(r).html;
+    body += wrapTerms(buildOverall(r, opts).html);
+    body += wrapTerms(sixDimSummary(r).html);
+    body += wrapTerms(buildDaYun(r).html);
+    body += wrapTerms(buildPast(r).html);
+    body += wrapTerms(buildFuture(r).html);
+    body += wrapTerms(buildSixDims(r, opts).html);
+    body += wrapTerms(buildShenSha(r).html);
+    body += wrapTerms(buildVerify(r).html);
 
     var notice = opts.isHourUnknown
       ? '<p class="warn box">⚠ 未提供出生时辰：时柱（子女宫、部分桃花/文昌细节）为<b>待定层</b>；年月日、日主、用神、大运、流年、神煞、纳音均为<b>确定层</b>。补时辰即可定稿。</p>'
@@ -1074,12 +1137,16 @@
       + '.ul{margin:8px 0 8px 20px;padding:0;} .ul li{margin:5px 0;}'
       + '.sub{font-weight:600;color:#5a4a22;margin:10px 0 2px;}'
       + '.disclaimer{margin:16px 0 4px;padding:12px 14px;background:#f4f0e6;border:1px dashed #c3b48a;border-radius:8px;font-size:12.5px;color:#5a5240;}'
+      + '.term{color:#1a5a9a;border-bottom:1px dashed #1a5a9a;cursor:pointer;}'
+      + '.term-tip{background:#eef4fb;border:1px solid #bcd3ea;border-radius:8px;padding:9px 12px;font-size:13px;color:#2f5a82;margin:4px 0 6px;}'
       + '</style>';
 
     var inner = '<h1>古典考释 · 八字六维专线</h1>'
       + '<div class="sub2">以《易经》《滴天髓》《子平真诠》《穷通宝鉴》《三命通会》《渊海子平》《四柱预测学》等权威典籍为纲 · 无据不妄断</div>'
+      + '<p class="term-tip">📖 本报告含八字专业术语，<b>蓝色虚线下划线</b>的词点一下即可看白话解释；文末「九 · 术语白话解」有完整词典。</p>'
       + notice
       + body
+      + buildGlossary().html
       + disclaimer;
 
     var html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -1093,7 +1160,19 @@
     return { title: title, html: html, fragment: fragment };
   }
 
-  return { generate: generate, QUOTE: QUOTE };
+  /* ============================ 术语白话解附录 ============================ */
+  function buildGlossary() {
+    var html = '<div class="card"><div class="card-h">九 · 术语白话解（一看就懂）</div><div class="card-b">';
+    html += '<p class="sub">报告里看不懂的词，在这里都能查到。也可直接点报告正文中的蓝色下划线词，即时弹出解释。</p>';
+    html += '<details><summary style="cursor:pointer;font-weight:600;color:#7a5c1e;">▸ 展开完整术语词典（' + Object.keys(GLOSSARY).length + ' 条）</summary><div style="margin-top:10px;">';
+    Object.keys(GLOSSARY).forEach(function (k) {
+      html += '<p style="margin:6px 0;border-bottom:1px dashed #e2d6b5;padding-bottom:6px;"><b style="color:#1a5a9a;">' + esc(k) + '</b>：' + esc(GLOSSARY[k]) + '</p>';
+    });
+    html += '</div></details></div></div>';
+    return { html: html };
+  }
+
+  return { generate: generate, QUOTE: QUOTE, GLOSSARY: GLOSSARY };
 });
 
 </script>
@@ -1250,6 +1329,20 @@ document.getElementById('back').onclick = function(){
   window.scrollTo(0,0);
 };
 renderHist();
+/* ===== 术语点击：弹出白话解释（移动端友好） ===== */
+document.getElementById('report-body').addEventListener('click', function (e) {
+  var t = e.target.closest ? e.target.closest('.term') : null;
+  if (!t) return;
+  var k = t.getAttribute('data-k');
+  var g = (window.BaziReport && BaziReport.GLOSSARY) || {};
+  if (!g[k]) return;
+  document.getElementById('termH').textContent = k;
+  document.getElementById('termB').textContent = g[k];
+  document.getElementById('termMask').style.display = 'flex';
+});
+document.getElementById('termClose').onclick = function () { document.getElementById('termMask').style.display = 'none'; };
+document.getElementById('termMask').addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
 </script>
+<div class="term-mask" id="termMask"><div class="term-pop" id="termPop"><span class="tp-x" id="termClose">×</span><div class="tp-h" id="termH"></div><div class="tp-b" id="termB"></div></div></div>
 </body>
 </html>
