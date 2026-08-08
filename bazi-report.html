@@ -808,22 +808,19 @@
   function buildDaYun(r) {
     var birthYear = parseInt(r.input.date, 10);
     var list = r.da_yun.list;
-    var xi = r.useful_god.xi, ji = r.useful_god.ji;
-    function relation(tg) {
-      // 大运十神对用神：简判（以十神所属五行与用神元素的关系难以直接映射，这里用十神名称粗判）
-      // 喜用为"生扶"（印比）或"克泄耗"（财官食伤）——交由调用处按全局
-      return tg;
-    }
     var html = '<div class="card"><div class="card-h">三 · 十年大运总览（' + r.da_yun.forward + '，'
       + r.da_yun.start.age_years + '岁' + r.da_yun.start.age_months + '个月起运·' + r.da_yun.start.term_name + '后）</div>'
-      + '<div class="card-b"><table class="grid">'
-      + '<tr><th>步</th><th>大运</th><th>十神</th><th>起止年龄</th><th>公元约</th><th>纳音</th></tr>';
+      + '<div class="card-b">'
+      + '<p class="term-tip">🏷️ <b>状态列</b>用「大吉/吉/平/小凶/凶」五色标签，直接告诉你这十年对你整体是顺还是逆；<b>十年手感</b>用一句话说清这十年大概什么体验。</p>'
+      + '<table class="grid">'
+      + '<tr><th>步</th><th>大运</th><th>十神</th><th>状态</th><th>十年手感</th><th>起止年龄</th><th>公元约</th><th>纳音</th></tr>';
     list.forEach(function (d) {
       var startY = birthYear + Math.round(d.start_age);
       var endY = birthYear + Math.round(d.end_age);
-      // 喜忌：以十神是否含喜用元素粗判（印比属生扶，财官食伤属克泄耗）
-      var cls = dayunClass(r, d.ten_god);
+      var st = dayunStatus(r, d);
       html += '<tr><td>' + d.index + '</td><td><b>' + d.pillar + '</b></td><td>' + d.ten_god + '</td>'
+        + '<td><span class="tag ' + st.cls + '">' + st.label + '</span></td>'
+        + '<td>' + st.text + '</td>'
         + '<td>' + d.start_age + '–' + d.end_age + '岁</td><td>' + startY + '–' + endY + '</td>'
         + '<td>' + d.nayin + '</td></tr>';
     });
@@ -831,9 +828,73 @@
       + '<p class="cite">「' + QUOTE.sizhu_dayun.s + '」' + QUOTE.sizhu_dayun.t + '；故下文逐年流年尤重"岁运并临、岁运相生"之年。</p></div></div>';
     return { html: html };
   }
-  function dayunClass(r, tg) {
-    // 生扶类（喜偏弱）：正偏印、比劫；克泄耗类（喜偏强）：财、官杀、食伤
-    return tg;
+
+  // 大运干支五行映射
+  var GAN_EL = { '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水' };
+  var ZHI_EL = { '寅': '木', '卯': '木', '巳': '火', '午': '火', '辰': '土', '戌': '土', '丑': '土', '未': '土', '申': '金', '酉': '金', '亥': '水', '子': '水' };
+  // 大运十神对用神的粗判（印比=生扶，财官食伤=克泄耗）
+  var SHENG_FU = ['正印', '偏印', '比肩', '劫财'];
+  var KE_XIE = ['正财', '偏财', '正官', '七杀', '食神', '伤官'];
+
+  // 大运综合吉凶：结合日主强弱、天干十神、地支五行喜忌，给出五级标签+通俗解释
+  function dayunStatus(r, d) {
+    var score = 0;
+    var tg = d.ten_god;
+    var isWeak = r.strength.score <= -1.5;
+    var isStrong = r.strength.score >= 1.5;
+
+    // 天干十神打分
+    if (inArr(SHENG_FU, tg)) {
+      if (isWeak) score += 2;      // 身弱得生扶 → 吉
+      else if (isStrong) score -= 2; // 身强再生扶 → 凶
+    } else if (inArr(KE_XIE, tg)) {
+      if (isStrong) score += 2;    // 身强得克泄耗 → 吉
+      else if (isWeak) score -= 2; // 身弱被克泄耗 → 凶
+    }
+
+    // 地支五行打分
+    var zhi = d.zhi || (d.pillar && d.pillar.charAt(1));
+    var zEl = ZHI_EL[zhi];
+    if (zEl) {
+      if (inArr(r.useful_god.xi, zEl)) score += 1;
+      if (inArr(r.useful_god.ji, zEl)) score -= 1;
+    }
+
+    var status;
+    if (score >= 3) status = { label: '大吉', cls: 'tag-daji' };
+    else if (score >= 1) status = { label: '吉', cls: 'tag-ji' };
+    else if (score >= -1) status = { label: '平', cls: 'tag-ping' };
+    else if (score >= -2) status = { label: '小凶', cls: 'tag-xiaoxiong' };
+    else status = { label: '凶', cls: 'tag-xiong' };
+
+    return { score: score, label: status.label, cls: status.cls, text: dayunText(r, d, status.label) };
+  }
+
+  function dayunText(r, d, label) {
+    var tg = d.ten_god;
+    var isWeak = r.strength.score <= -1.5;
+    var isStrong = r.strength.score >= 1.5;
+    if (label === '大吉' || label === '吉') {
+      if (inArr(SHENG_FU, tg)) {
+        if (tg.indexOf('印') >= 0) return '贵人、平台、学历运旺，利深造、考证、得长辈/领导提携';
+        return '同辈朋友、合作者助力多，利团队、合伙、人脉扩张';
+      }
+      if (tg.indexOf('财') >= 0) return '财运上扬，收入渠道拓宽，利经营、投资、加薪';
+      if (tg.indexOf('官') >= 0 || tg.indexOf('杀') >= 0) return '事业心强、机会多，利升职、掌权、建立影响力';
+      if (tg.indexOf('食') >= 0 || tg.indexOf('伤') >= 0) return '才华输出顺畅，利创作、表达、技艺变现、口碑传播';
+      return '整体顺遂，可主动进取';
+    }
+    if (label === '小凶' || label === '凶') {
+      if (inArr(SHENG_FU, tg)) {
+        return '帮扶太过反成竞争、依赖或惰性，宜独立深耕、少借贷担保';
+      }
+      if (tg.indexOf('财') >= 0) return '求财辛苦或财来财去，不宜大额投资、高杠杆';
+      if (tg.indexOf('官') >= 0 || tg.indexOf('杀') >= 0) return '压力、责任、约束重，易有口舌或健康透支，宜守成减压';
+      if (tg.indexOf('食') >= 0 || tg.indexOf('伤') >= 0) return '付出多回报慢，表达易招是非，宜低调积累';
+      return '阻力偏大，宜稳不宜急';
+    }
+    // 平
+    return '运势中和，吉凶参半，随流年起伏，宜稳中求进';
   }
 
   /* ============================ 前面运势回顾 ============================ */
@@ -865,19 +926,8 @@
     html += '</div></div>';
     return { html: html, curIdx: curIdx };
   }
-  // 大运十神对用神的粗判（印比=生扶，财官食伤=克泄耗）
-  var SHENG_FU = ['正印', '偏印', '比肩', '劫财'];
-  var KE_XIE = ['正财', '偏财', '正官', '七杀', '食神', '伤官'];
   function dayunVerdict(r, d) {
-    var isWeak = r.strength.score <= -1.5;
-    var isStrong = r.strength.score >= 1.5;
-    if (inArr(SHENG_FU, d.ten_god)) {
-      return isWeak ? '印比生扶为喜，此运得师长、同辈之助，利学业积累' : (isStrong ? '身强再行印比，帮扶太过，宜防依赖、竞争' : '中和，平顺积累');
-    }
-    if (inArr(KE_XIE, d.ten_god)) {
-      return isStrong ? '财官食伤泄秀为喜，此运才华得展、事业财源有进' : (isWeak ? '身弱不胜克泄，此运压力大、宜守不宜攻' : '中和，顺势而为');
-    }
-    return '十神平稳，随流年起伏';
+    return dayunStatus(r, d).text;
   }
 
   /* ============================ 未来流年 ============================ */
@@ -1139,6 +1189,12 @@
       + '.disclaimer{margin:16px 0 4px;padding:12px 14px;background:#f4f0e6;border:1px dashed #c3b48a;border-radius:8px;font-size:12.5px;color:#5a5240;}'
       + '.term{color:#1a5a9a;border-bottom:1px dashed #1a5a9a;cursor:pointer;}'
       + '.term-tip{background:#eef4fb;border:1px solid #bcd3ea;border-radius:8px;padding:9px 12px;font-size:13px;color:#2f5a82;margin:4px 0 6px;}'
+      + '.tag{display:inline-block;padding:2px 7px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap;}'
+      + '.tag-daji{background:#d4edda;color:#155724;}'
+      + '.tag-ji{background:#e8f5e9;color:#2e7d32;}'
+      + '.tag-ping{background:#fff3cd;color:#856404;}'
+      + '.tag-xiaoxiong{background:#ffe0b2;color:#e65100;}'
+      + '.tag-xiong{background:#f8d7da;color:#721c24;}'
       + '</style>';
 
     var inner = '<h1>古典考释 · 八字六维专线</h1>'
