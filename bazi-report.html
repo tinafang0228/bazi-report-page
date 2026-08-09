@@ -1396,6 +1396,38 @@
     else { rating = '凶'; cls = 'tag-xiong'; }
     var suggest = (rating === '大吉' || rating === '吉') ? '顺势进取、宜把握机会' : (rating === '平' ? '平稳过渡、稳中求进' : '守成为上、宜静不宜动');
 
+    // 综合评级描述：结合流年十神、岁运关系、刑冲合会，生成专属描述（非固定模板）
+    var jiHit = inArr(ji, lyGanEl) || inArr(ji, lyZhiEl);
+    var xiHit = inArr(xi, lyGanEl) || inArr(xi, lyZhiEl);
+    var xchHit = xch.length ? xch : [];
+    var blurb;
+    if (rating === '大吉' || rating === '吉') {
+      var goodPart = xiHit ? ('流年' + lyPillar + '（' + lyTenGod + '）正合你喜用（' + xi + '）') : '岁运相生、无大冲犯';
+      var goodX = xchHit.length ? ('，且' + xchHit.map(function (x) { return x.text; }).join('、') + '多主吉象') : '';
+      blurb = goodPart + '，本年得力、宜主动进取把握机会' + goodX + '。';
+    } else if (rating === '平') {
+      var pingX = xchHit.length ? ('，' + xchHit.map(function (x) { return x.text; }).join('、') + '小幅引动') : '';
+      blurb = '流年' + lyPillar + '（' + lyTenGod + '）与命局无大冲犯' + pingX + '，整体平稳、宜稳中渐进。';
+    } else {
+      // 凶/小凶：按具体成因细分，避免千篇一律
+      var causes = [];
+      if (jiHit) causes.push('流年' + lyPillar + '（' + lyTenGod + '）恰是你忌神（' + ji + '）当旺');
+      if (lyPillar === active) causes.push('又逢岁运并临，凶象加倍');
+      xchHit.forEach(function (x) {
+        if (x.type === '冲') {
+          if (DIZHI_CHONG[lyZhi] === pd.day.zhi) causes.push('流年冲夫妻宫（' + pd.day.zhi + '），感情易生波动');
+          else if (DIZHI_CHONG[lyZhi] === pd.hour.zhi) causes.push('流年冲子女宫（' + pd.hour.zhi + '），育儿/子女事多耗神');
+          else if (DIZHI_CHONG[lyZhi] === pd.month.zhi) causes.push('流年冲月柱（事业/平台宫），职场易有变动内耗');
+          else if (DIZHI_CHONG[lyZhi] === pd.year.zhi) causes.push('流年冲年柱（根基/父母宫），家门易有变动');
+          else causes.push('流年' + x.text + '，静守为宜');
+        } else if (x.type === '刑' || x.type === '害') causes.push('流年' + x.text + '，原局慢性内耗易触发');
+        else if (x.type === '合') causes.push('流年' + x.text + '，事务多牵绊、宜防纠缠');
+        else if (x.type === '三合') causes.push('流年' + x.text + (inArr(xi, x.el) ? '、气聚成局为喜' : '、气聚成局加重忌神'));
+      });
+      if (relTxt && relTxt.indexOf('相战') >= 0) causes.push('岁运相战，内外掣肘');
+      blurb = (causes.length ? causes.join('；') : '流年干支与喜用背道而驰') + '，外象或有热闹、内里易耗损，宜守成、忌冒进扩张。';
+    }
+
     // 岁运关系
     var relTxt = '';
     if (active) {
@@ -1452,7 +1484,10 @@
     var health = [];
     if (xch.some(function (x) { return x.type === '刑' || x.type === '害'; })) health.push('流年引动刑害，命局自带慢性内耗之象易触发（压力大、休息不足时明显）');
     if (inArr(miss, lyGanEl) || inArr(miss, lyZhiEl)) { var me = inArr(miss, lyGanEl) ? lyGanEl : lyZhiEl; health.push('流年五行恰为命局所缺（' + me + '），对应 ' + ORGAN[me] + ' 需格外养护'); }
-    else health.push('无特别冲克，按原局体质倾向日常养护即可（' + ORGAN[weakest] + '）');
+    else {
+      var weakest = ['木', '火', '土', '金', '水'].reduce(function (a, b) { return r.wuxing[b] < r.wuxing[a] ? b : a; });
+      health.push('无特别冲克，按原局体质倾向日常养护即可（' + ORGAN[weakest] + '）');
+    }
 
     // —— 组装 HTML（year-box 卡片版式，参考深度版）——
     var xchTxt = xch.length ? xch.map(function (x) { return x.text; }).join('、') : '命局无额外刑冲合会引动';
@@ -1460,8 +1495,8 @@
     html += '<div class="year-box">';
     html += '<p class="yb-h">📅 ' + year + ' ' + lyPillar + '年 · ' + (opts.name ? esc(opts.name) + ' ' : '') + age + ' 岁 · 行' + (active || '—') + '大运</p>';
     html += '<p style="margin:6px 0 10px;">本年你是<b>' + (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '喜用到位' : (inArr(ji, lyGanEl) || inArr(ji, lyZhiEl) ? '忌神当旺' : '中和之年')) + '</b>：流年 ' + lyPillar + '（' + lyTenGod + '，' + lyGanEl + '干/' + lyZhiEl + '支），与命中喜用（' + xi + '）' + (inArr(ji, lyGanEl) || inArr(ji, lyZhiEl) ? '背道而驰' : (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '相合' : '无大冲犯')) + '，整体基调是"' + suggest + '"。</p>';
-    html += '<div class="yb-row"><div class="yb-k">🌟 综合评级</div><div class="yb-v"><span class="tag ' + cls + '">' + rating + ' · ' + suggest + '</span>　' + (inArr(ji, lyGanEl) || inArr(ji, lyZhiEl) ? '外象热闹、内里耗损，不宜冒进扩张' : (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '顺势可得、宜把握机会' : '平稳过渡、稳中求进')) + '。</div></div>';
-    html += '<div class="yb-row"><div class="yb-k">💼 事业</div><div class="yb-v">' + career.join('；') + (xch.some(function (x) { return x.parts.indexOf(pd.month.zhi) >= 0; }) ? '；流年引动月柱（事业/平台宫），宜防上级、制度、平台内耗' : '') + '。</div></div>';
+    html += '<div class="yb-row"><div class="yb-k">🌟 综合评级</div><div class="yb-v"><span class="tag ' + cls + '">' + rating + ' · ' + suggest + '</span>　' + blurb + '</div></div>';
+    html += '<div class="yb-row"><div class="yb-k">💼 事业</div><div class="yb-v">' + career.join('；') + '。</div></div>';
     html += '<div class="yb-row"><div class="yb-k">💰 财运</div><div class="yb-v">' + wealth.join('；') + '。</div></div>';
     html += '<div class="yb-row"><div class="yb-k">💑 姻缘</div><div class="yb-v">' + love.join('；') + '。</div></div>';
     html += '<div class="yb-row"><div class="yb-k">👶 子女</div><div class="yb-v">' + child.join('；') + '。</div></div>';
@@ -1518,7 +1553,17 @@
     if (pd.month.ten_god.indexOf('伤官') >= 0 && (pd.year.ten_god.indexOf('官') >= 0 || pd.day.ten_god.indexOf('七杀') >= 0)) {
       html += '</p><p class="cite warn">「' + QUOTE.shangguan_jianguan.s + '」' + QUOTE.shangguan_jianguan.t + '；月柱伤官、见官，职场易与上级/制度冲突，宜专业服人而非权斗。</p>';
     } else { html += '</p>'; }
-    html += '<p class="det">事业应象：' + (shenWeak ? '早年宜积累专业与平台，逢生扶（印比）运方得依托发力，后发而稳者居多' : (shenStrong ? '凭技艺才华可中年发越，行财官运最佳' : '中和，随运顺势、稳中求进')) + '。</p>';
+    var careerOutlook;
+    if (shenWeak) {
+      careerOutlook = '早年宜积累专业与平台，逢生扶（印比）运方得依托发力，后发而稳者居多';
+      if (inArr(missing, yinEl)) careerOutlook += '；印星全缺，更须后天自补学历、证书、平台资历，莫纯靠天赋';
+    } else if (shenStrong) {
+      careerOutlook = '身强可担财官，凭技艺才华可中年发越，行财官运最佳';
+      if (inArr(KE_XIE, pd.month.ten_god)) careerOutlook += '；月令' + pd.month.ten_god + '泄秀为喜，宜把才华变现而非守成';
+    } else {
+      careerOutlook = '中和，随运顺势、稳中求进';
+    }
+    html += '<p class="det">事业应象：' + careerOutlook + '。</p>';
 
     // —— 姻缘 ——
     html += '<h3>2. 姻缘（' + (isMale ? '妻星：' + spouseStar.join('/') : '夫星：' + spouseStar.join('/')) + '）</h3>';
