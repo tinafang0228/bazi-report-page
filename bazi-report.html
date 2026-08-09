@@ -1343,6 +1343,241 @@
     return null;
   }
 
+  /* ============================ 当年运势 · 六维分项（本命+流年双轴） ============================ */
+function yearlySixDims(r, o) {
+  var pd = r.pillars_detail;
+  var dm = r.day_master.gan, dmEl = r.day_master.element;
+  var isMale = r.input.gender === '男';
+  var st = r.strength;
+  var shenWeak = st.score <= -1.5, shenStrong = st.score >= 1.5;
+  var xi = o.xi, ji = o.ji;
+  var lyTenGod = o.lyTenGod, lyGanEl = o.lyGanEl, lyZhiEl = o.lyZhiEl, lyZhi = o.lyZhi;
+  var active = o.active;
+  var xch = o.xch;
+
+  function starPos(stars) {
+    var res = [];
+    ['year', 'month', 'hour'].forEach(function (p) {
+      if (inArr(stars, pd[p].ten_god)) res.push({ p: p, tg: pd[p].ten_god, pillar: pd[p].gan + pd[p].zhi });
+    });
+    return res;
+  }
+  var spouseStar = isMale ? ['正财', '偏财'] : ['正官', '七杀'];
+  var childStar  = isMale ? ['正官', '七杀'] : ['食神', '伤官'];
+  var spouse = starPos(spouseStar);
+  var childPos = starPos(childStar);
+  var yin = starPos(['正印', '偏印']);
+  var shishang = starPos(['食神', '伤官']);
+  var caiXing = starPos(['正财', '偏财']);
+  var monthGod = pd.month.ten_god;
+
+  var activeDayun = null;
+  r.da_yun.list.forEach(function (d) { if (d.pillar === active) activeDayun = d; });
+  var activeTG = activeDayun ? activeDayun.ten_god : '';
+
+  var miss = [];
+  ['木', '火', '土', '金', '水'].forEach(function (e) { if (r.wuxing[e] === 0) miss.push(e); });
+  var weakest = null, wv = 99;
+  ['木', '火', '土', '金', '水'].forEach(function (e) { if (r.wuxing[e] > 0 && r.wuxing[e] < wv) { wv = r.wuxing[e]; weakest = e; } });
+  var strongest = null, sv = -1;
+  ['木', '火', '土', '金', '水'].forEach(function (e) { if (r.wuxing[e] > sv) { sv = r.wuxing[e]; strongest = e; } });
+
+  // 日主五行 → 财库地支（财星之墓库）
+  var CAIKU_ZHI = {
+    '甲': ['辰'], '乙': ['辰'],
+    '丙': ['丑'], '丁': ['丑'],
+    '戊': ['辰'], '己': ['辰'],
+    '庚': ['未'], '辛': ['未'],
+    '壬': ['戌'], '癸': ['戌']
+  };
+
+  // -------------- 事业 --------------
+  var career = [];
+  var baseClauses = [];
+  if (shenWeak && yin.length === 0) baseClauses.push('日主偏弱，印星（贵人、平台、学历）全缺，事业根基不在体制荫庇，须后天自补专业与口碑');
+  else if (shenWeak && yin.length) baseClauses.push('日主偏弱，印星有依，事业宜走资质+平台路线');
+  else if (shenStrong) baseClauses.push('日主强旺，能担财官，事业可主动争取权责');
+  else baseClauses.push('日主中和，事业随运起伏，宜稳中求进');
+  if (shishang.length) baseClauses.push('原局食伤泄秀，才华、表达、技艺是突破口');
+  if (inArr(['正官', '七杀'], monthGod)) baseClauses.push('月令官杀，事业心重、规则意识强，也易承压');
+  else if (inArr(['食神', '伤官'], monthGod)) baseClauses.push('月令食伤，专业路线、专家型人才');
+  else if (inArr(['正财', '偏财'], monthGod)) baseClauses.push('月令财星，业务、营收、资源变现导向');
+  else if (inArr(['正印', '偏印'], monthGod)) baseClauses.push('月令印星，平台、学术、资质导向');
+  else if (inArr(['比肩', '劫财'], monthGod)) baseClauses.push('月令比劫，团队、合伙、竞争路线');
+  if (pd.month.ten_god.indexOf('伤官') >= 0 && (pd.year.ten_god.indexOf('官') >= 0 || pd.hour.ten_god.indexOf('官') >= 0))
+    baseClauses.push('伤官见官，职场不服管束、易与上级/制度摩擦');
+  career.push(baseClauses.join('；'));
+
+  var liuClauses = [];
+  if (inArr(['正官', '七杀'], lyTenGod)) {
+    if (shenWeak) liuClauses.push('流年官杀压身，身弱难承，宜稳守本职、不宜争权冒进');
+    else if (shenStrong) liuClauses.push('流年官杀带来事业机会与压力，身强可主动争取上位');
+    else liuClauses.push('流年官杀带来机会与压力，宜审时度势、量力而行');
+  } else if (inArr(['正印', '偏印'], lyTenGod)) {
+    if (shenWeak) liuClauses.push('流年印星生扶，利考证、进修、贵人提携');
+    else if (shenStrong) liuClauses.push('流年印星主资质平台，但你身强忌印，助力有限、反易阻滞');
+    else liuClauses.push('流年印星利资质与平台，也防依赖与惰性');
+  } else if (inArr(['食神', '伤官'], lyTenGod)) {
+    if (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl)) liuClauses.push('流年食伤泄秀为喜，才华外显、利表达技艺');
+    else if (shenWeak) liuClauses.push('流年食伤泄身，付出多回报慢，宜低调积累');
+    else liuClauses.push('流年食伤主才华输出，宜把想法落地、忌空谈');
+  } else if (inArr(['正财', '偏财'], lyTenGod)) {
+    if (shenWeak) liuClauses.push('流年财星透出，身弱不胜财，事业与收益挂钩但辛苦');
+    else if (shenStrong) liuClauses.push('流年财星透出，事业与收益直接挂钩，可积极把握');
+    else liuClauses.push('流年财星透出，收入有动，宜量入为出');
+  } else {
+    liuClauses.push('流年比劫，宜团队合伙、忌单打独斗；合作防分利');
+  }
+  career.push(liuClauses.join('；'));
+
+  if (activeTG) {
+    if (activeTG === '正印' || activeTG === '偏印') career.push('当前印星大运，平台资质是事业主线');
+    else if (activeTG === '正官' || activeTG === '七杀') career.push('当前官杀大运，事业压力与机会并存');
+    else if (activeTG === '食神' || activeTG === '伤官') career.push('当前食伤大运，才华输出是事业主线');
+    else if (activeTG === '正财' || activeTG === '偏财') career.push('当前财星大运，营收变现是事业主线');
+    else career.push('当前比劫大运，合伙团队是事业主线');
+  }
+
+  var jobMoveMap = {};
+  xch.forEach(function (x) {
+    if (x.parts.indexOf(pd.month.zhi) >= 0) jobMoveMap['月柱'] = '流年引动月柱（事业/平台宫），职场易有平台、制度、上级层面变动';
+    if (x.parts.indexOf(pd.year.zhi) >= 0) jobMoveMap['年柱'] = '流年引动年柱（根基宫），事业根基或行业环境有调整';
+  });
+  var jobMove = Object.keys(jobMoveMap).map(function (k) { return jobMoveMap[k]; });
+  if (jobMove.length) career.push(jobMove.join('；'));
+
+  // -------------- 财运 --------------
+  var wealth = [];
+  var wealthBase = [];
+  if (caiXing.length) {
+    wealthBase.push('原局财星透出于' + caiXing.map(function (c) { return c.pillar; }).join('、') + '，财源有象');
+    if (shenWeak) wealthBase.push('但身弱不胜财，财来财去、劳而后得');
+    else if (shenStrong) wealthBase.push('身强可胜财，有理财与经营空间');
+  } else {
+    wealthBase.push('原局财星不透，非财气通门户之暴发格');
+    var cangCai = false;
+    ['year', 'month', 'day', 'hour'].forEach(function (p) {
+      (ZHI_HIDDEN[pd[p].zhi] || []).forEach(function (g) {
+        if (inArr(['正财', '偏财'], tenGodOf(dm, g))) cangCai = true;
+      });
+    });
+    if (cangCai) wealthBase.push('财星仅藏支，须大运流年引出方显');
+    else wealthBase.push('财富多靠专业劳务、项目报酬');
+  }
+  var caiKu = [];
+  (CAIKU_ZHI[dm] || []).forEach(function (ku) {
+    if (pd.year.zhi === ku || pd.month.zhi === ku || pd.day.zhi === ku || pd.hour.zhi === ku) caiKu.push(ku);
+  });
+  if (caiKu.length) wealthBase.push('命带财库（' + caiKu.join('、') + '），有蓄财之象，但库需冲开方发');
+  wealth.push(wealthBase.join('；'));
+
+  var wealthLiu = [];
+  if (inArr(['正财', '偏财'], lyTenGod)) {
+    if (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl)) wealthLiu.push('流年财星为喜用，收入有实质性增长机会');
+    else wealthLiu.push('流年财星为忌神，财来财去、或因财生累');
+  } else if (inArr(['正官', '七杀'], lyTenGod)) {
+    wealthLiu.push('流年官杀主事业压力，财运随事业绩效波动');
+  } else if (inArr(['食神', '伤官'], lyTenGod)) {
+    wealthLiu.push('流年食伤生财有象，利技艺变现、副业、口碑收入');
+  } else if (inArr(['正印', '偏印'], lyTenGod)) {
+    wealthLiu.push('流年印星主资质投入，财运平稳、宜学习而非投机');
+  } else {
+    wealthLiu.push('流年比劫，合作求财须防分利、忌担保借贷');
+  }
+  wealth.push(wealthLiu.join('；'));
+
+  if (activeTG) {
+    if (activeTG === '正财' || activeTG === '偏财') wealth.push('正行财星大运，财运是这十年主线');
+    else if (activeTG === '正印' || activeTG === '偏印') wealth.push('正行印星大运，财运靠平台资质转化');
+  }
+
+  // -------------- 姻缘 --------------
+  var love = [];
+  var spouseName = isMale ? '财星' : '官杀';
+  var loveBase = [];
+  if (spouse.length) {
+    loveBase.push('原局' + spouseName + '现于' + spouse.map(function (s) { return s.pillar + s.tg; }).join('、'));
+    if (isMale && spouse.some(function (s) { return s.tg === '偏财'; })) loveBase.push('偏财透干，情缘类型偏多样');
+    if (!isMale && spouse.some(function (s) { return s.tg === '七杀'; })) loveBase.push('七杀透干，易遇强势或偏缘');
+  } else {
+    loveBase.push('原局' + spouseName + '不显，姻缘较淡或待运引');
+  }
+  var dayPalaceGod = branchMainGod(pd.day.zhi, dm);
+  loveBase.push('夫妻宫（日支' + pd.day.zhi + '，本气' + dayPalaceGod + '）' + (inArr(r.kongwang, pd.day.zhi) ? '坐空亡，婚姻宜务实经营' : '得位'));
+  if (!isMale) {
+    var hasZg = spouse.some(function (s) { return s.tg === '正官'; });
+    var hasQs = spouse.some(function (s) { return s.tg === '七杀'; });
+    if (hasZg && hasQs) loveBase.push('官杀混杂，感情选择多、关系复杂，宜专一');
+  }
+  love.push(loveBase.join('；'));
+
+  var loveLiu = [];
+  if (inArr(spouseStar, lyTenGod)) loveLiu.push('流年配偶星（' + lyTenGod + '）透出，异性缘/婚恋信号明显');
+  else loveLiu.push('流年配偶星不透，姻缘平淡或待机');
+  if (lyZhi === r.shen_sha.hongluan) loveLiu.push('红鸾值年，最强姻缘喜庆之期');
+  if (lyZhi === r.shen_sha.tianxi) loveLiu.push('天喜值年，添喜庆之气');
+  if (lyZhi === r.shen_sha.taohua) loveLiu.push('桃花值年，人缘情缘旺');
+  if (DIZHI_CHONG[lyZhi] === pd.day.zhi) loveLiu.push('冲夫妻宫，感情易波动、已婚者多沟通');
+  else if (DIZHI_HE[lyZhi] === pd.day.zhi) loveLiu.push('与夫妻宫相合，感情有进展契机');
+  love.push(loveLiu.join('；'));
+
+  // -------------- 子女 --------------
+  var child = [];
+  var childName = isMale ? '官杀' : '食伤';
+  var childBase = [];
+  if (childPos.length) {
+    childBase.push('原局子女星（' + childName + '）现于' + childPos.map(function (c) { return c.pillar + c.tg; }).join('、') + '，子女缘有象');
+  } else {
+    childBase.push('原局子女星（' + childName + '）不显，子女缘弱而待引');
+  }
+  if (inArr(r.kongwang, pd.hour.zhi)) childBase.push('子女宫（时柱）落空亡，子女事宜中年稳固后更显');
+  child.push(childBase.join('；'));
+
+  var childLiu = [];
+  if (inArr(childStar, lyTenGod)) childLiu.push('流年子女星（' + lyTenGod + '）动，与子女互动/教育事多');
+  else childLiu.push('流年子女星不动，子女运平稳');
+  if (DIZHI_CHONG[lyZhi] === pd.hour.zhi) childLiu.push('冲子女宫，育儿宜多用心');
+  child.push(childLiu.join('；'));
+
+  // -------------- 家庭 --------------
+  var family = [];
+  var familyBase = [];
+  familyBase.push('年柱' + pd.year.gan + pd.year.zhi + '（' + pd.year.ten_god + '）主祖上根基，月柱' + pd.month.gan + pd.month.zhi + '（' + pd.month.ten_god + '）主父母手足');
+  if (inArr(r.kongwang, pd.year.zhi) || inArr(r.kongwang, pd.month.zhi)) familyBase.push('年月柱落空亡，家门荫力有减，宜自立');
+  family.push(familyBase.join('；'));
+
+  var familyLiu = [];
+  if (DIZHI_CHONG[lyZhi] === pd.year.zhi || DIZHI_CHONG[lyZhi] === pd.month.zhi) familyLiu.push('流年冲年月柱（父母/根基宫），家门易有变动、宜多关照长辈');
+  else if (DIZHI_HE[lyZhi] === pd.year.zhi || DIZHI_HE[lyZhi] === pd.month.zhi) familyLiu.push('流年合年月柱，家庭和睦、易有团聚或添丁之喜');
+  else familyLiu.push('家庭宫平稳，无大波动');
+  family.push(familyLiu.join('；'));
+
+  // -------------- 健康 --------------
+  var health = [];
+  var healthBase = [];
+  if (miss.length) healthBase.push('原局五行缺' + miss.join('、') + '，对应' + miss.map(function (e) { return ORGAN[e]; }).join('、') + '先天偏弱');
+  else healthBase.push('原局五行俱全，最弱为' + weakest + '（' + ORGAN[weakest] + '）');
+  healthBase.push('最旺为' + strongest + '，过旺则' + ORGAN[strongest] + '系统易负担过重');
+  var xch0 = detectXingChongHe([pd.year.zhi, pd.month.zhi, pd.day.zhi, pd.hour.zhi]);
+  if (xch0.length) healthBase.push('原局' + xch0.map(function (x) { return x.text; }).join('、') + '所涉地支对应脏腑易现慢性反复');
+  health.push(healthBase.join('；'));
+
+  var healthLiu = [];
+  if (xch.some(function (x) { return x.type === '刑' || x.type === '害'; })) healthLiu.push('流年引动刑害，命局慢性内耗之象易触发');
+  if (inArr(miss, lyGanEl) || inArr(miss, lyZhiEl)) {
+    var me = inArr(miss, lyGanEl) ? lyGanEl : lyZhiEl;
+    healthLiu.push('流年五行恰为命局所缺（' + me + '），对应' + ORGAN[me] + '需格外养护');
+  }
+  if (lyGanEl === strongest || lyZhiEl === strongest) {
+    healthLiu.push('流年加重命局最旺之' + strongest + '，' + ORGAN[strongest] + '系统负荷增大');
+  }
+  if (healthLiu.length === 0) healthLiu.push('本年无特别冲克，按原局体质倾向日常养护即可');
+  health.push(healthLiu.join('；'));
+
+  return { career: career, wealth: wealth, love: love, child: child, family: family, health: health };
+}
+
+
   /* ============================ 当年（指定年）整体运势说明 ============================ */
   function buildYearly(r, opts) {
     opts = opts || {};
@@ -1440,54 +1675,9 @@
       }
     }
 
-    // —— 六维分项（白话）——
-    var spouseStar = isMale ? ['正财', '偏财'] : ['正官', '七杀'];
-    var childStar = isMale ? ['正官', '七杀'] : ['食神', '伤官'];
-
-    // 事业
-    var career = [];
-    if (inArr(['正官', '七杀'], lyTenGod)) career.push('事业机会与压力并存，' + (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '宜主动争取上位' : '宜稳守、防责任过载'));
-    else if (inArr(['正印', '偏印'], lyTenGod)) career.push('印星之年，利资质、平台、贵人提携' + (inArr(ji, lyGanEl) ? '（但印非喜用，助力有限）' : ''));
-    else if (inArr(['食神', '伤官'], lyTenGod)) career.push('食伤之年，才华外显、利表达技艺与口碑传播');
-    else if (inArr(['正财', '偏财'], lyTenGod)) career.push('财星之年，事业与收益直接挂钩');
-    else career.push('比劫之年，宜团队合伙、忌单打独斗争利');
-    if (xch.some(function (x) { return x.parts.indexOf(pd.month.zhi) >= 0; })) career.push('且流年引动月柱（事业/平台宫），宜防上级、制度、平台内耗');
-
-    // 财运
-    var wealth = [];
-    if (inArr(['正财', '偏财'], lyTenGod)) wealth.push('财星透出，收入有动' + (inArr(ji, lyGanEl) ? '，但财为忌神，财来财去宜守' : '，宜把握'));
-    else wealth.push('财星不透，财运随事业走、忌大额投机');
-    if (inArr(['比肩', '劫财'], lyTenGod)) wealth.push('比劫分财，合作防分利、忌担保借贷');
-
-    // 姻缘
-    var love = [];
-    if (inArr(spouseStar, lyTenGod)) love.push('配偶星（' + lyTenGod + '）透出，异性缘/婚恋信号明显');
-    else love.push('配偶星不透，姻缘平淡或待机');
-    if (lyZhi === r.shen_sha.hongluan) love.push('红鸾值年，最强姻缘喜庆之期');
-    if (DIZHI_CHONG[lyZhi] === pd.day.zhi) love.push('冲夫妻宫，感情易有波动、已婚者多沟通');
-    else if (DIZHI_HE[lyZhi] === pd.day.zhi) love.push('与夫妻宫相合，感情有进展契机');
-
-    // 子女
-    var child = [];
-    if (inArr(childStar, lyTenGod)) child.push('子女星（' + lyTenGod + '）动，与子女互动/教育事多');
-    else child.push('子女星不动，子女运平稳');
-    if (DIZHI_CHONG[lyZhi] === pd.hour.zhi) child.push('冲子女宫，育儿宜多用心');
-
-    // 家庭
-    var family = [];
-    if (DIZHI_CHONG[lyZhi] === pd.year.zhi || DIZHI_CHONG[lyZhi] === pd.month.zhi) family.push('流年冲年月柱（父母/根基宫），家门易有变动、宜多关照长辈');
-    else if (DIZHI_HE[lyZhi] === pd.year.zhi || DIZHI_HE[lyZhi] === pd.month.zhi) family.push('流年合年月柱，家庭和睦、易有团聚或添丁之喜');
-    else family.push('家庭宫平稳，无大波动');
-
-    // 健康
-    var miss = []; ['木', '火', '土', '金', '水'].forEach(function (e) { if (r.wuxing[e] === 0) miss.push(e); });
-    var health = [];
-    if (xch.some(function (x) { return x.type === '刑' || x.type === '害'; })) health.push('流年引动刑害，命局自带慢性内耗之象易触发（压力大、休息不足时明显）');
-    if (inArr(miss, lyGanEl) || inArr(miss, lyZhiEl)) { var me = inArr(miss, lyGanEl) ? lyGanEl : lyZhiEl; health.push('流年五行恰为命局所缺（' + me + '），对应 ' + ORGAN[me] + ' 需格外养护'); }
-    else {
-      var weakest = ['木', '火', '土', '金', '水'].reduce(function (a, b) { return r.wuxing[b] < r.wuxing[a] ? b : a; });
-      health.push('无特别冲克，按原局体质倾向日常养护即可（' + ORGAN[weakest] + '）');
-    }
+    // —— 六维分项（本命+流年双轴，拒绝模板句）——
+    var six = yearlySixDims(r, { year: year, lyGan: lyGan, lyZhi: lyZhi, lyPillar: lyPillar, lyTenGod: lyTenGod, lyGanEl: lyGanEl, lyZhiEl: lyZhiEl, active: active, xch: xch, xi: xi, ji: ji });
+    var career = six.career, wealth = six.wealth, love = six.love, child = six.child, family = six.family, health = six.health;
 
     // —— 组装 HTML（year-box 卡片版式，参考深度版）——
     var xchTxt = xch.length ? xch.map(function (x) { return x.text; }).join('、') : '命局无额外刑冲合会引动';
