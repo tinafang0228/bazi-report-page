@@ -40,7 +40,7 @@
     <div class="card">
       <label>出生日期（公历）</label>
       <div class="row">
-        <div><input id="date" type="text" placeholder="如 19880228 或 1988-02-28" value="2000-02-28"></div>
+        <div><input id="date" type="text" placeholder="如 19990228 或 1999-02-28" value="2000-02-28"></div>
         <div style="flex:0 0 92px;"><button type="button" id="pickDate" style="width:100%;padding:11px 0;background:#cdbf95;color:#4a3c18;border:none;border-radius:8px;font-size:13px;cursor:pointer;">📅 选择</button></div>
       </div>
       <input type="date" id="datePicker" style="display:none;">
@@ -57,11 +57,12 @@
       <input id="cname" type="text" placeholder="如 张三 / 李四" maxlength="12">
       <label>查看年份（默认今年，可改看任意年整体运势）</label>
       <input id="year" type="number" min="1900" max="2100" placeholder="如 2026">
-      <label>出生地（省市，用于真太阳时校正）</label>
+      <label>出生地（省/市，用于真太阳时校正）</label>
       <div class="row">
         <div><select id="prov"><option value="">— 省/直辖市 —</option></select></div>
-        <div><select id="city"><option value="">— 市 —</option></select></div>
+        <div><input id="city" type="text" list="cityList" placeholder="可下拉选或手写，如 揭阳 / 惠来" autocomplete="off"></div>
       </div>
+      <datalist id="cityList"></datalist>
       <div class="err" id="err"></div>
       <button class="btn" id="go">生成我的古典考释报告</button>
       <div class="note">选择省市后自动带出当地经度用于真太阳时校正；填不准不影响四柱（只影响时辰微调）。也可在下方手动微调经度。</div>
@@ -1778,18 +1779,20 @@ function fillProv(){
   Object.keys(PROV).forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
 }
 function fillCity(prov){
-  var csel=document.getElementById('city'); csel.innerHTML='<option value="">— 市 —</option>';
+  var dl=document.getElementById('cityList'); dl.innerHTML='';
   var rec=PROV[prov]; if(!rec||!rec[1]) return;
-  Object.keys(rec[1]).forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;csel.appendChild(o);});
+  Object.keys(rec[1]).forEach(function(c){
+    var o=document.createElement('option'); o.value=c; dl.appendChild(o);
+  });
 }
 function curLon(){
-  var prov=document.getElementById('prov').value, city=document.getElementById('city').value;
+  var prov=document.getElementById('prov').value, city=document.getElementById('city').value.trim();
   var rec=PROV[prov]; if(!rec) return 116.4;
   if(city && rec[1] && rec[1][city]!=null) return rec[1][city];
-  return rec[0];
+  return rec[0];   // 城市未匹配到时使用省份代表经度（下方仍可手动微调）
 }
 document.getElementById('prov').onchange=function(){ fillCity(this.value); document.getElementById('lon').value=curLon(); };
-document.getElementById('city').onchange=function(){ document.getElementById('lon').value=curLon(); };
+document.getElementById('city').addEventListener('input', function(){ document.getElementById('lon').value=curLon(); });
 document.getElementById('useLon').onclick=function(){ /* 仅作提示：手动值已写入 lon，生成时读取 */ };
 fillProv();
 document.getElementById('year').value = new Date().getFullYear();
