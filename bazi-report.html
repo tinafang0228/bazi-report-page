@@ -1495,7 +1495,7 @@
     html += '<div class="year-box">';
     html += '<p class="yb-h">📅 ' + year + ' ' + lyPillar + '年 · ' + (opts.name ? esc(opts.name) + ' ' : '') + age + ' 岁 · 行' + (active || '—') + '大运</p>';
     html += '<p style="margin:6px 0 10px;">本年你是<b>' + (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '喜用到位' : (inArr(ji, lyGanEl) || inArr(ji, lyZhiEl) ? '忌神当旺' : '中和之年')) + '</b>：流年 ' + lyPillar + '（' + lyTenGod + '，' + lyGanEl + '干/' + lyZhiEl + '支），与命中喜用（' + xi + '）' + (inArr(ji, lyGanEl) || inArr(ji, lyZhiEl) ? '背道而驰' : (inArr(xi, lyGanEl) || inArr(xi, lyZhiEl) ? '相合' : '无大冲犯')) + '，整体基调是"' + suggest + '"。</p>';
-    html += '<div class="yb-row"><div class="yb-k">🌟 综合评级</div><div class="yb-v"><span class="tag ' + cls + '">' + rating + ' · ' + suggest + '</span>　' + blurb + '</div></div>';
+    html += '<div class="yb-row"><div class="yb-k">综合评级</div><div class="yb-v"><span class="tag ' + cls + '">' + suggest + '</span>　' + blurb + '</div></div>';
     html += '<div class="yb-row"><div class="yb-k">💼 事业</div><div class="yb-v">' + career.join('；') + '。</div></div>';
     html += '<div class="yb-row"><div class="yb-k">💰 财运</div><div class="yb-v">' + wealth.join('；') + '。</div></div>';
     html += '<div class="yb-row"><div class="yb-k">💑 姻缘</div><div class="yb-v">' + love.join('；') + '。</div></div>';
